@@ -1019,3 +1019,34 @@ button.highlight-pulse {
   border-top: 1px solid var(--border);
 }
 
+
+.terms-line {
+  margin: 14px 0 0;
+  font-size: 12px;
+  color: var(--fg-2);
+  text-align: left;
+}
+.terms-line a {
+  color: var(--accent, #4a90ff);
+  text-decoration: underline;
+}
+.terms-body {
+  max-width: 640px;
+}
+.terms-content {
+  padding: 18px 22px 22px;
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--fg, inherit);
+  max-height: 70vh;
+  overflow-y: auto;
+}
+.terms-content p { margin: 0 0 14px; }
+.terms-content ol {
+  margin: 0;
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.terms-content li strong { color: var(--fg, inherit); }
