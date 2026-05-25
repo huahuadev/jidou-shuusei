@@ -2,6 +2,9 @@ import type { ImageEntry, ProgressFile } from "./types";
 
 const IMAGE_EXTS = new Set(["jpg", "jpeg", "png", "webp"]);
 export const BACKUP_DIR = "_jidou-shuusei-edited";
+// こーそくしゅーせー (image-mask-webapp) からの移行ユーザーが過去に作った保存フォルダ。
+// 中身は編集済み画像なので、入力対象に含めないようにスキップする。
+const IGNORED_DIRS = new Set<string>([BACKUP_DIR, "_image-mask-edited"]);
 export const PROGRESS_FILE = "progress.json";
 export const INFERENCE_FILE = "inference.json";
 export const README_FILE = "README.txt";
@@ -43,7 +46,7 @@ async function walkDirectoryHandle(
     [string, FileSystemHandle]
   >) {
     if (handle.kind === "directory") {
-      if (name === BACKUP_DIR) continue;
+      if (IGNORED_DIRS.has(name)) continue;
       await walkDirectoryHandle(handle as FileSystemDirectoryHandle, `${prefix}${name}/`, out);
     } else {
       if (!isImage(name)) continue;
@@ -101,7 +104,7 @@ export function pickInputViaFallback(input: HTMLInputElement): Promise<{
         const parts = rel.split("/");
         if (parts.length >= 1) rootName = parts[0];
         const relPath = parts.slice(1).join("/");
-        if (parts.includes(BACKUP_DIR)) continue;
+        if (parts.some((p) => IGNORED_DIRS.has(p))) continue;
         if (!isImage(f.name)) continue;
         entries.push({
           id: `${++entryCounter}`,
