@@ -1,0 +1,21 @@
+{
+  "name": "jidou-shuusei",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build && rm -f dist/assets/ort-wasm-*.wasm dist/assets/ort-wasm-*.mjs",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "playwright": "^1.60.0",
+    "typescript": "~6.0.2",
+    "vite": "^8.0.12"
+  },
+  "dependencies": {
+    "@types/wicg-file-system-access": "^2023.10.7",
+    "jszip": "^3.10.1",
+    "onnxruntime-web": "^1.26.0"
+  }
+}

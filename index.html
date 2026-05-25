@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>じどーしゅーせー β</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <main id="wizard">
+      <!-- ===== Step 1: Pick input folder ===== -->
+      <section id="stepInput" class="wizard-step">
+        <div class="wizard-inner">
+          <div class="intro-title">
+            <h1 class="intro-title-main">じどーしゅーせー <span class="intro-title-beta">β</span></h1>
+            <p class="intro-title-sub">自動検出 + 修正で画像をまとめてマスクするツール</p>
+          </div>
+          <div class="step-no">STEP 1</div>
+          <h2>修正したい画像が入っているフォルダを選んでください</h2>
+
+          <div class="folder-diagram">
+            <div class="diagram-caption">こんなフォルダを選ぶと…</div>
+            <div class="diagram-tree">
+              <div class="dt-row dt-folder">📁 my-folder</div>
+              <div class="dt-row dt-image dt-l1"><span class="dt-pipe">├ </span>🖼️ photo1.png</div>
+              <div class="dt-row dt-folder dt-l1"><span class="dt-pipe">├ </span>📁 subfolder</div>
+              <div class="dt-row dt-image dt-l2"><span class="dt-pipe">│ &nbsp; ├ </span>🖼️ photo2.png</div>
+              <div class="dt-row dt-image dt-l2"><span class="dt-pipe">│ &nbsp; └ </span>🖼️ photo3.png</div>
+              <div class="dt-row dt-image dt-l1"><span class="dt-pipe">└ </span>🖼️ photo4.png</div>
+            </div>
+            <div class="diagram-result">
+              <span class="diagram-result-icon">→</span>
+              <span><strong>photo1.png 〜 photo4.png の 4 枚すべて</strong>を読み込みます (jpg / png / webp 対応)</span>
+            </div>
+          </div>
+
+          <button id="btnPickInputBig" class="primary big">画像のフォルダを選ぶ</button>
+
+
+          <div id="fsUnsupported" class="warn-card fs-unsupported" hidden>
+            <div class="warn-card-head">⚠️ このブラウザでは使えません</div>
+            <p>
+              フォルダへの直接書き出しに対応した <strong>Chrome / Edge</strong> でアクセスしてください。<br />
+              (Firefox / Safari では動きません)
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== Step 2: Warning before editor ===== -->
+      <section id="stepWarning" class="wizard-step" hidden>
+        <div class="wizard-inner">
+          <div class="step-no">STEP 2</div>
+          <h2>注意点</h2>
+          <p class="picked-folder">選んだフォルダ: <strong id="pickedFolderName">—</strong></p>
+
+          <div class="info-card safe-card">
+            <div class="info-card-head">🔒 画像は<strong>あなたの PC の中だけ</strong>で処理されます</div>
+            <ul>
+              <li>検出・編集・保存はすべて<strong>このパソコンの中だけ</strong>で行われます。</li>
+              <li>画像がインターネットに送られることはありません (サーバーへのアップロード一切なし)。</li>
+              <li>未修正のままどこかへ公開・配布される心配はありません。</li>
+            </ul>
+          </div>
+
+          <div class="warn-card">
+            <div class="warn-card-head">⚠️ このツールは「<strong>すでに修正済みの箇所</strong>」を再修正するためのものです</div>
+            <ul>
+              <li><strong>無修正画像から修正場所を検出するのは苦手です。</strong></li>
+            </ul>
+          </div>
+
+          <div class="warn-card">
+            <div class="warn-card-head">⚠️ 自動検出は補助です。必ず自分の目で確認してください</div>
+            <ul>
+              <li>自動検出は常に正しいとは限りません。<strong>本ツールは結果について一切の責任を負いません</strong>。</li>
+            </ul>
+          </div>
+
+          <div class="warn-card">
+            <div class="warn-card-head">⚠️ 編集中、選んだフォルダ内に <code>_jidou-shuusei-edited/</code> という保存用フォルダが作られます</div>
+            <ul>
+              <li>編集済み画像と進捗が入ります。これにより<strong>続きから再開</strong>できます。</li>
+              <li><strong>中の画像は直接いじらないでください</strong> (進捗とずれて壊れます)。</li>
+            </ul>
+          </div>
+          <div class="warning-actions">
+            <button id="btnBackToInput" class="secondary">← 戻る</button>
+            <button id="btnStartEditing" class="primary big">編集を開始 →</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== Editor ===== -->
+      <section id="stepEditor" class="wizard-step editor-step" hidden>
+        <div class="toolbar">
+          <button id="btnBackToWizard" class="secondary">← 別のフォルダを開く</button>
+          <button id="btnExportZip" class="secondary highlight-target">📦 ZIP でダウンロード</button>
+          <button id="btnShowTutorial" class="secondary" title="使い方を表示">❓ 使い方</button>
+          <span class="toolbar-sep"></span>
+          <span id="modeIndicator" class="mode-indicator">—</span>
+        </div>
+
+        <div id="autoBar" class="auto-bar" data-method="black">
+          <span class="auto-bar-label">自動検出</span>
+          <label class="auto-bar-method">
+            検出範囲に
+            <select id="autoMethodSelect" title="自動検出した範囲に適用する処理">
+              <option value="black" selected>黒塗り</option>
+              <option value="white">白塗り</option>
+              <option value="mosaic">モザイク</option>
+              <option value="blur">ぼかし</option>
+            </select>
+            を適用
+          </label>
+          <span class="auto-bar-sep"></span>
+          <div class="auto-bar-params">
+            <label class="auto-param" data-for="mosaic">
+              モザイク強度
+              <input type="range" id="autoBlockSize" min="0.2" max="10" step="0.1" value="4.0" />
+              <span id="autoBlockSizeVal" class="value-num">4.0</span>%
+            </label>
+            <label class="auto-param" data-for="blur">
+              ぼかし強度
+              <input type="range" id="autoBlurSigma" min="0.2" max="10" step="0.1" value="4.0" />
+              <span id="autoBlurSigmaVal" class="value-num">4.0</span>%
+            </label>
+          </div>
+        </div>
+
+        <div id="tutorialPopover" class="tutorial-popover" hidden>
+          <div class="tutorial-arrow"></div>
+          <div class="tutorial-body">
+            <div class="tutorial-head">
+              <span class="tutorial-step-no" id="tutorialStepNo">1 / 3</span>
+              <span class="tutorial-title" id="tutorialTitle">—</span>
+            </div>
+            <div class="tutorial-text" id="tutorialText"></div>
+            <div class="tutorial-actions">
+              <button id="btnTutorialNext" class="primary">次へ →</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="main">
+          <aside class="sidebar" id="sidebar">
+            <div class="sidebar-head">
+              <span class="sidebar-title">画像一覧</span>
+              <span id="imageCount" class="count">0</span>
+              <button id="btnToggleSidebar" class="sidebar-toggle" title="サイドバーを折りたたむ">‹</button>
+            </div>
+            <div class="sidebar-filter" id="sidebarFilter">
+              <button class="filter-chip active" data-filter="all" type="button" title="すべて表示">すべて</button>
+              <button class="filter-chip" data-filter="pending" type="button" title="未編集のみ表示。S や ←→ もこの中で移動します">未編集</button>
+              <button class="filter-chip" data-filter="done" type="button" title="編集済 / 保存済のみ表示">編集済</button>
+            </div>
+            <div id="treeRoot" class="tree">
+              <p class="empty">—</p>
+            </div>
+            <div class="sidebar-collapsed-info">
+              <span id="sidebarBadge" class="sidebar-badge" title="画像一覧を開く">0</span>
+            </div>
+          </aside>
+
+          <section class="editor-area">
+            <div class="editor-toolbar">
+              <div class="tb-group">
+                ツール:
+                <label><input type="radio" name="tool" value="brush" /> ブラシ</label>
+                <label><input type="radio" name="tool" value="lasso" checked /> 投げ縄</label>
+                <label><input type="radio" name="tool" value="eraser" /> 消しゴム</label>
+              </div>
+              <div class="tb-group">
+                適用:
+                <select id="methodSelect">
+                  <option value="black" selected>黒塗り</option>
+                  <option value="white">白塗り</option>
+                  <option value="mosaic">モザイク</option>
+                  <option value="blur">ぼかし</option>
+                </select>
+              </div>
+              <div class="tb-group">
+                ブラシサイズ:
+                <input type="range" id="brushSize" min="0.5" max="15" step="0.1" value="3" />
+                <span id="brushSizeVal" class="value-num">3.0</span>%
+              </div>
+              <div class="tb-group">
+                モザイク強度:
+                <input type="range" id="blockSize" min="0.2" max="10" step="0.1" value="4.0" />
+                <span id="blockSizeVal" class="value-num">4.0</span>%
+              </div>
+              <div class="tb-group">
+                ぼかし強度:
+                <input type="range" id="blurSigma" min="0.2" max="10" step="0.1" value="4.0" />
+                <span id="blurSigmaVal" class="value-num">4.0</span>%
+              </div>
+              <button id="btnUndo" class="secondary" title="Undo (Z / Ctrl+Z)">Undo</button>
+              <button id="btnReset" class="secondary">リセット</button>
+              <button id="btnClearAuto" class="secondary" disabled title="自動検出と手動編集を全部消して、元画像に戻します">🗑 修正を全削除</button>
+            </div>
+            <div class="split-wrap" id="splitWrap">
+              <div class="split-pane" id="beforePane">
+                <div class="split-head">
+                  <span class="split-label">検出結果</span>
+                  <span id="inferStatus" class="infer-status">—</span>
+                </div>
+                <div class="canvas-wrap before-wrap" id="beforeWrap" title="クリックで検出範囲の表示を切替">
+                  <div class="canvas-stack" id="beforeStack">
+                    <canvas id="beforeCanvas"></canvas>
+                    <canvas id="beforeOverlayCanvas" class="before-overlay"></canvas>
+                  </div>
+                  <p class="placeholder" id="beforePlaceholder">画像を選ぶと検出します。</p>
+                  <span id="overlayHint" class="overlay-hint">クリックで検出範囲を表示/非表示</span>
+                </div>
+              </div>
+              <div id="splitDivider" class="split-divider" title="ドラッグでサイズ変更"></div>
+              <div class="split-pane" id="afterPane">
+                <div class="split-head">
+                  <span class="split-label" id="afterLabel">修正結果 (編集画面)</span>
+                  <span class="split-hint" id="afterHint">S で保存して次へ</span>
+                  <button id="btnPeekOriginal" class="peek-btn" disabled title="押している間、修正前の元画像を表示します">👁 修正なしを見る</button>
+                  <span id="savedBadge" class="saved-badge" hidden>
+                    <span class="saved-badge-icon">✓</span> 保存済 — リセットで再編集
+                  </span>
+                </div>
+                <div class="canvas-wrap" id="canvasWrap">
+                  <div class="canvas-stack" id="canvasStack">
+                    <canvas id="canvas"></canvas>
+                    <svg id="lassoSvg" class="lasso-svg" preserveAspectRatio="none" hidden>
+                      <path id="lassoPathOuter" />
+                      <path id="lassoPathInner" />
+                    </svg>
+                  </div>
+                  <p class="placeholder" id="canvasPlaceholder">左の一覧から画像を選んでください。</p>
+                  <div id="brushCursor" class="brush-cursor" hidden></div>
+                </div>
+              </div>
+            </div>
+            <div class="editor-footer">
+              <span id="currentPath" class="current-path">—</span>
+              <span class="footer-spacer"></span>
+              <span id="saveStatus" class="save-status"></span>
+              <button id="btnSave" class="primary" disabled title="保存して次へ (S キーでも可)">保存して次へ <span class="kbd-hint">S</span></button>
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+
+
+    <div id="modelLoadingOverlay" class="model-loading-overlay" hidden>
+      <div class="model-loading-card">
+        <div class="model-loading-spinner"></div>
+        <div class="model-loading-title">モデルを読み込んでいます</div>
+        <div class="model-loading-text">初回のみ少し時間がかかります</div>
+      </div>
+    </div>
+
+    <div id="doneOverlay" class="done-overlay" hidden>
+      <div class="done-card">
+        <div class="done-icon" id="doneIcon">🎉</div>
+        <div class="done-title" id="doneTitle">すべて編集しました</div>
+        <div class="done-text" id="doneText">—</div>
+        <div class="done-actions">
+          <button id="btnDoneFilterPending" class="primary" hidden>未編集だけ表示する</button>
+          <button id="btnDoneZip" class="primary big">📦 ZIP でダウンロード</button>
+          <button id="btnDoneClose" class="secondary">閉じる</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="zipModal" class="modal" hidden>
+      <div class="modal-overlay" id="zipModalOverlay"></div>
+      <div class="modal-body">
+        <div class="modal-head">
+          <h3>ZIP でダウンロード</h3>
+          <span class="modal-spacer"></span>
+          <button id="btnCloseZipModal" class="secondary">閉じる</button>
+        </div>
+        <div class="modal-list">
+          <p class="hint">
+            <strong>保存済みの画像のみ</strong> ZIP に含まれます。<span id="zipModalCount" class="modal-count">—</span>
+          </p>
+          <div class="style-section">
+            <label class="choice-card">
+              <input type="radio" name="zipStyle" value="flat" checked />
+              <div class="choice-card-body">
+                <div class="choice-title">フラットで ZIP</div>
+                <div class="choice-desc">
+                  すべての画像が 1 つのフォルダに並びます。<br />
+                  <strong>配布に便利</strong>。
+                </div>
+                <div class="mini-diagram">
+                  <span class="md-col">入力<br /><code>my-folder/<br />&nbsp;&nbsp;photo1.png<br />&nbsp;&nbsp;sub/photo2.png</code></span>
+                  <span class="md-arrow">→</span>
+                  <span class="md-col">出力<br /><code>output/<br />&nbsp;&nbsp;photo1.png<br />&nbsp;&nbsp;sub_photo2.png</code></span>
+                </div>
+              </div>
+            </label>
+            <label class="choice-card">
+              <input type="radio" name="zipStyle" value="structured" />
+              <div class="choice-card-body">
+                <div class="choice-title">そのままの構成で ZIP</div>
+                <div class="choice-desc">
+                  元のフォルダと<strong>同じ構造</strong>で並びます。<br />
+                  <strong>差し替えや再投稿で元画像との対応を保ちたい場合はこちら</strong>。
+                </div>
+                <div class="mini-diagram">
+                  <span class="md-col">入力<br /><code>my-folder/<br />&nbsp;&nbsp;photo1.png<br />&nbsp;&nbsp;sub/photo2.png</code></span>
+                  <span class="md-arrow">→</span>
+                  <span class="md-col">出力<br /><code>output/<br />&nbsp;&nbsp;photo1.png<br />&nbsp;&nbsp;sub/photo2.png</code></span>
+                </div>
+              </div>
+            </label>
+          </div>
+          <div class="modal-actions">
+            <button id="btnZipDownload" class="primary big">ダウンロード</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
