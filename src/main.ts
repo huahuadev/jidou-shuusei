@@ -4,6 +4,7 @@ import { BeforeView } from "./beforeView";
 import { Editor } from "./editor";
 import { warmup, isSessionReady } from "./infer";
 import { InferenceCache } from "./inferenceCache";
+import { ImageLoader } from "./imageLoader";
 import {
   deleteBackupFile,
   hasFsAccess,
@@ -159,6 +160,7 @@ const editor = new Editor(els.canvas, (s) => {
 editor.setLassoSvg(els.lassoSvg, els.lassoPathOuter, els.lassoPathInner);
 const beforeView = new BeforeView(els.beforeCanvas, els.beforeOverlayCanvas);
 const inferenceCache = new InferenceCache();
+const imageLoader = new ImageLoader();
 const PREFETCH_AHEAD = 2;
 
 async function persistProgress(): Promise<void> {
@@ -341,10 +343,22 @@ async function selectEntry(index: number) {
   els.beforeWrap.classList.remove("has-overlay");
   beforeView.clearOverlay();
   beforeView.setOverlayVisible(true);
-  await Promise.all([
-    editor.loadFromBlob(entry.editedBlob ?? entry.file),
-    beforeView.loadFromBlob(entry.file),
-  ]);
+  if (entry.editedBlob) {
+    const [editedBitmap, originalBitmap] = await Promise.all([
+      createImageBitmap(entry.editedBlob),
+      imageLoader.get(entry, entry.file),
+    ]);
+    try {
+      editor.loadFromBitmap(editedBitmap);
+    } finally {
+      editedBitmap.close();
+    }
+    beforeView.loadFromBitmap(originalBitmap);
+  } else {
+    const bitmap = await imageLoader.get(entry, entry.file);
+    editor.loadFromBitmap(bitmap);
+    beforeView.loadFromBitmap(bitmap);
+  }
   editor.setAutoMethod(autoState.method, currentAutoParams());
   applyLockForEntry(entry);
   renderTree();
@@ -431,6 +445,7 @@ function schedulePrefetch() {
   for (let i = start; i < end; i++) {
     const e = state.entries[i];
     if (!e) continue;
+    imageLoader.prefetch(e, e.file);
     if (e.status === "saved" || e.status === "edited" || e.editedBlob) continue;
     inferenceCache.prefetch(e);
   }
@@ -687,6 +702,7 @@ function backToWizard() {
   state.rootName = "";
   inferenceCache.reset();
   inferenceCache.setRoot(null);
+  imageLoader.clear();
   editor.clear();
   editor.setLocked(false);
   beforeView.clear();
@@ -791,7 +807,8 @@ async function onReset() {
     await persistProgress();
   }
 
-  await editor.loadFromBlob(entry.file);
+  const bitmap = await imageLoader.get(entry, entry.file);
+  editor.loadFromBitmap(bitmap);
   editor.setAutoMethod(autoState.method, currentAutoParams());
   applyLockForEntry(entry);
   renderTree();

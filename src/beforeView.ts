@@ -16,27 +16,29 @@ export class BeforeView {
   }
 
   async loadFromBlob(blob: Blob): Promise<void> {
-    const url = URL.createObjectURL(blob);
+    const bitmap = await createImageBitmap(blob);
     try {
-      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-        const el = new Image();
-        el.onload = () => resolve(el);
-        el.onerror = () => reject(new Error("画像読込失敗"));
-        el.src = url;
-      });
-      const w = img.naturalWidth;
-      const h = img.naturalHeight;
-      this.baseCanvas.width = w;
-      this.baseCanvas.height = h;
-      this.baseCtx.drawImage(img, 0, 0);
-      this.overlayCanvas.width = w;
-      this.overlayCanvas.height = h;
-      this.overlayCtx.clearRect(0, 0, w, h);
-      this.hasOverlay = false;
-      this.fitSize();
+      this.applyBitmap(bitmap);
     } finally {
-      URL.revokeObjectURL(url);
+      bitmap.close();
     }
+  }
+
+  loadFromBitmap(bitmap: ImageBitmap): void {
+    this.applyBitmap(bitmap);
+  }
+
+  private applyBitmap(bitmap: ImageBitmap): void {
+    const w = bitmap.width;
+    const h = bitmap.height;
+    this.baseCanvas.width = w;
+    this.baseCanvas.height = h;
+    this.baseCtx.drawImage(bitmap, 0, 0);
+    this.overlayCanvas.width = w;
+    this.overlayCanvas.height = h;
+    this.overlayCtx.clearRect(0, 0, w, h);
+    this.hasOverlay = false;
+    this.fitSize();
   }
 
   clear(): void {

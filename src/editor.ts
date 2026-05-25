@@ -92,34 +92,38 @@ export class Editor {
   }
 
   async loadFromBlob(blob: Blob): Promise<void> {
-    const url = URL.createObjectURL(blob);
+    const bitmap = await createImageBitmap(blob);
     try {
-      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-        const el = new Image();
-        el.onload = () => resolve(el);
-        el.onerror = () => reject(new Error("画像読込失敗"));
-        el.src = url;
-      });
-      this.canvas.width = img.naturalWidth;
-      this.canvas.height = img.naturalHeight;
-      this.previewCanvas.width = img.naturalWidth;
-      this.previewCanvas.height = img.naturalHeight;
-      this.ctx.drawImage(img, 0, 0);
-      const data = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
-      this.original = new ImageData(new Uint8ClampedArray(data.data), data.width, data.height);
-      this.current = new ImageData(new Uint8ClampedArray(data.data), data.width, data.height);
-      this.autoMask = null;
-      this.manualOps = [];
-      this.dragBase = null;
-      this.lassoPath = [];
-      if (this.lassoSvg) {
-        this.lassoSvg.setAttribute("viewBox", `0 0 ${img.naturalWidth} ${img.naturalHeight}`);
-        this.setLassoVisible(false);
-      }
-      this.fitCanvasSize();
+      this.applyBitmap(bitmap);
     } finally {
-      URL.revokeObjectURL(url);
+      bitmap.close();
     }
+  }
+
+  loadFromBitmap(bitmap: ImageBitmap): void {
+    this.applyBitmap(bitmap);
+  }
+
+  private applyBitmap(bitmap: ImageBitmap): void {
+    const w = bitmap.width;
+    const h = bitmap.height;
+    this.canvas.width = w;
+    this.canvas.height = h;
+    this.previewCanvas.width = w;
+    this.previewCanvas.height = h;
+    this.ctx.drawImage(bitmap, 0, 0);
+    const data = this.ctx.getImageData(0, 0, w, h);
+    this.original = new ImageData(new Uint8ClampedArray(data.data), data.width, data.height);
+    this.current = new ImageData(new Uint8ClampedArray(data.data), data.width, data.height);
+    this.autoMask = null;
+    this.manualOps = [];
+    this.dragBase = null;
+    this.lassoPath = [];
+    if (this.lassoSvg) {
+      this.lassoSvg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+      this.setLassoVisible(false);
+    }
+    this.fitCanvasSize();
     this.emit();
   }
 
