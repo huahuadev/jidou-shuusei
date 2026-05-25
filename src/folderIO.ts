@@ -43,7 +43,7 @@ async function walkDirectoryHandle(
     [string, FileSystemHandle]
   >) {
     if (handle.kind === "directory") {
-      if (prefix === "" && name === BACKUP_DIR) continue;
+      if (name === BACKUP_DIR) continue;
       await walkDirectoryHandle(handle as FileSystemDirectoryHandle, `${prefix}${name}/`, out);
     } else {
       if (!isImage(name)) continue;
